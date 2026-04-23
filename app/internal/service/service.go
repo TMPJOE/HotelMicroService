@@ -1,13 +1,12 @@
-// Package service contains the business logic layer of the application.
-// It defines service interfaces and implements use cases by orchestrating
-// repositories, applying business rules, and returning results to handlers.
 package service
 
 import (
+	"bytes"
 	"context"
 	"log/slog"
 
 	"github.com/google/uuid"
+	"hotel.com/app/internal/client"
 	"hotel.com/app/internal/models"
 	"hotel.com/app/internal/repo"
 )
@@ -18,6 +17,7 @@ type Service interface {
 	// Hotel methods
 	ListHotels(ctx context.Context, city string, limit, offset int) ([]*models.Hotel, error)
 	CreateHotel(ctx context.Context, hotel *models.Hotel) error
+	CreateHotelWithFiles(ctx context.Context, hotel *models.Hotel, files []models.FileUpload) error
 	GetHotelByID(ctx context.Context, id string) (*models.Hotel, error)
 	UpdateHotel(ctx context.Context, hotel *models.Hotel) error
 	DeleteHotel(ctx context.Context, id string) error
@@ -28,8 +28,9 @@ type Service interface {
 }
 
 type fooService struct {
-	l *slog.Logger
-	r repo.ServiceRepository
+	l  *slog.Logger
+	r  repo.ServiceRepository
+	mc client.MediaClient
 }
 
 func (s *fooService) Check() error {
@@ -46,6 +47,24 @@ func (s *fooService) ListHotels(ctx context.Context, city string, limit, offset 
 func (s *fooService) CreateHotel(ctx context.Context, hotel *models.Hotel) error {
 	hotel.ID = uuid.NewString()
 	return s.r.CreateHotel(ctx, hotel)
+}
+
+func (s *fooService) CreateHotelWithFiles(ctx context.Context, hotel *models.Hotel, files []models.FileUpload) error {
+	hotel.ID = uuid.NewString()
+
+	if err := s.r.CreateHotel(ctx, hotel); err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		_, err := s.mc.UploadFile(ctx, bytes.NewReader(file.Content), file.Filename, "hotel", hotel.ID, file.ContentType)
+		if err != nil {
+			s.l.Error("failed to upload file to media service", "error", err, "filename", file.Filename)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *fooService) GetHotelByID(ctx context.Context, id string) (*models.Hotel, error) {
@@ -66,8 +85,6 @@ func (s *fooService) CreateReview(ctx context.Context, review *models.Review) er
 	if err != nil {
 		return err
 	}
-	// Update the cached rating on the hotel asynchronously or synchronously
-	// Going synchronous to guarantee consistency for immediate fetches
 	return s.r.UpdateHotelRating(ctx, review.HotelID)
 }
 
@@ -75,9 +92,10 @@ func (s *fooService) ListReviewsByHotelID(ctx context.Context, hotelID string, l
 	return s.r.ListReviewsByHotelID(ctx, hotelID, limit, offset)
 }
 
-func New(l *slog.Logger, r repo.ServiceRepository) Service {
+func New(l *slog.Logger, r repo.ServiceRepository, mc client.MediaClient) Service {
 	return &fooService{
-		l: l,
-		r: r,
+		l:  l,
+		r:  r,
+		mc: mc,
 	}
 }

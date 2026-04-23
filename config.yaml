@@ -24,3 +24,7 @@ circuit_breaker:
 health:
   path: "/health"
   ready_path: "/ready"
+
+# Media Service configuration
+media_service:
+  url: "http://media-service:8080"

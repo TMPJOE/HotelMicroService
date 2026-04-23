@@ -36,6 +36,21 @@ type CreateHotelRequest struct {
 	Lng         float64 `json:"lng"`
 }
 
+type CreateHotelWithFilesRequest struct {
+	Name        string
+	City        string
+	Description string
+	Lat         float64
+	Lng         float64
+	Files       []FileUpload
+}
+
+type FileUpload struct {
+	Filename    string
+	Content     []byte
+	ContentType string
+}
+
 type UpdateHotelRequest struct {
 	Name        *string  `json:"name"`
 	City        *string  `json:"city"`

@@ -5,6 +5,7 @@ package handler
 
 import (
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -95,28 +96,97 @@ func (h *Handler) handleCreateHotel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.CreateHotelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.RespondError(w, http.StatusBadRequest, "invalid request payload")
-		return
+	var hotel *models.Hotel
+	var files []models.FileUpload
+
+	contentType := r.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			helper.RespondError(w, http.StatusBadRequest, "failed to parse multipart form")
+			return
+		}
+
+		hotel = &models.Hotel{
+			AdminID: claims.UserID,
+			Name:    r.FormValue("name"),
+			City:    r.FormValue("city"),
+		}
+
+		if desc := r.FormValue("description"); desc != "" {
+			hotel.Description = desc
+		}
+		if lat := r.FormValue("lat"); lat != "" {
+			if parsed, err := strconv.ParseFloat(lat, 64); err == nil {
+				hotel.Lat = parsed
+			}
+		}
+		if lng := r.FormValue("lng"); lng != "" {
+			if parsed, err := strconv.ParseFloat(lng, 64); err == nil {
+				hotel.Lng = parsed
+			}
+		}
+
+		if r.MultipartForm != nil {
+			for _, fileHeaders := range r.MultipartForm.File {
+				for _, header := range fileHeaders {
+					file, err := header.Open()
+					if err != nil {
+						h.l.Error("failed to open uploaded file", "error", err)
+						helper.RespondError(w, http.StatusBadRequest, "failed to open uploaded file")
+						return
+					}
+					defer file.Close()
+
+					content := make([]byte, header.Size)
+					if _, err := io.ReadFull(file, content); err != nil {
+						h.l.Error("failed to read uploaded file", "error", err)
+						helper.RespondError(w, http.StatusBadRequest, "failed to read uploaded file")
+						return
+					}
+
+					files = append(files, models.FileUpload{
+						Filename:    header.Filename,
+						Content:     content,
+						ContentType: header.Header.Get("Content-Type"),
+					})
+				}
+			}
+		}
+	} else {
+		var req models.CreateHotelRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.RespondError(w, http.StatusBadRequest, "invalid request payload")
+			return
+		}
+
+		if req.Name == "" || req.City == "" {
+			helper.RespondError(w, http.StatusBadRequest, "name and city are required")
+			return
+		}
+
+		hotel = &models.Hotel{
+			AdminID:     claims.UserID,
+			Name:        req.Name,
+			City:        req.City,
+			Description: req.Description,
+			Lat:         req.Lat,
+			Lng:         req.Lng,
+		}
 	}
 
-	// Validate required fields (in a real app, use validator package)
-	if req.Name == "" || req.City == "" {
+	if hotel.Name == "" || hotel.City == "" {
 		helper.RespondError(w, http.StatusBadRequest, "name and city are required")
 		return
 	}
 
-	hotel := &models.Hotel{
-		AdminID:     claims.UserID,
-		Name:        req.Name,
-		City:        req.City,
-		Description: req.Description,
-		Lat:         req.Lat,
-		Lng:         req.Lng,
+	var err error
+	if len(files) > 0 {
+		err = h.s.CreateHotelWithFiles(r.Context(), hotel, files)
+	} else {
+		err = h.s.CreateHotel(r.Context(), hotel)
 	}
 
-	if err := h.s.CreateHotel(r.Context(), hotel); err != nil {
+	if err != nil {
 		h.l.Error("failed to create hotel", "error", err)
 		helper.RespondError(w, http.StatusInternalServerError, "failed to create hotel")
 		return
