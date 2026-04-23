@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	publicKeyPath  = "/app/keys/public.pem"
-	privateKeyPath = "/app/keys/private.pem"
+	publicKeyPath = "/app/keys/public.pem"
 )
 
 func main() {
@@ -49,11 +48,6 @@ func main() {
 	}
 
 	//jwt key file check
-	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
-		l.Error("JWT private key file not found", "err", err)
-		os.Exit(-1)
-	}
-	//jwt key file check
 	if _, err := os.Stat(publicKeyPath); os.IsNotExist(err) {
 		l.Error("JWT public key file not found", "err", err)
 		os.Exit(-1)
@@ -67,10 +61,10 @@ func main() {
 
 	// handler creation
 	jwtConfig := handler.JWTConfig{
-		Issuer:     "blueprint-service",
+		Issuer:     "users-service",
 		Expiration: 24 * time.Minute,
 	}
-	jwtAuth := handler.NewJWTAuthenticator(jwtConfig, privateKeyPath, publicKeyPath)
+	jwtAuth := handler.NewJWTAuthenticator(jwtConfig, publicKeyPath)
 	h := handler.New(svc, l, jwtAuth)
 
 	// server creation

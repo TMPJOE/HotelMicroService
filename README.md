@@ -145,12 +145,22 @@ docker-compose up -d
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/health` | Health check endpoint. Returns service health status. |
-| `GET` | `/ready` | Readiness check. Verifies database connectivity. |
+| `GET`  | `/health` | Health check endpoint. Returns service health status. |
+| `GET`  | `/ready`  | Readiness check. Verifies database connectivity. |
+| `GET`  | `/hotels` | List hotels with optional `?city=...` and pagination. |
+| `GET`  | `/hotels/{id}` | Fetch details for a specific hotel by ID. |
+| `GET`  | `/hotels/{id}/reviews` | List reviews for a specific hotel. |
 
 ### Protected Routes (JWT Required)
 
-Add protected endpoints in the protected route group in `routing.go`.
+The following routes require a valid JWT token passed in the `Authorization: Bearer <token>` header.
+
+| Method   | Path | Description | Access |
+|----------|------|-------------|--------|
+| `POST`   | `/hotels` | Create a new hotel. | Admin Only |
+| `PUT`    | `/hotels/{id}` | Update an existing hotel. | Admin Only (Owner) |
+| `DELETE` | `/hotels/{id}` | Delete a hotel. | Admin Only (Owner) |
+| `POST`   | `/hotels/{id}/reviews` | Submit a review (1-5 stars) for a hotel. | Any Authenticated User |
 
 ## Configuration Reference
 

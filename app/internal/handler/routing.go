@@ -36,13 +36,23 @@ func (h *Handler) NewServerMux(rateLimiter *RateLimiter) *chi.Mux {
 		r.Get("/health", h.healthCheck)
 		r.Get("/ready", h.readinessCheck)
 		// Add other generic public endpoints here (metrics, version, etc.)
+
+		r.Get("/hotels", h.handleListHotels)
+		r.Get("/hotels/{id}", h.handleGetHotel)
+		r.Get("/hotels/{id}/reviews", h.handleListReviews)
 	})
 
 	// Protected routes - require JWT authentication
 	r.Group(func(r chi.Router) {
 		r.Use(h.jwtAuth.Middleware()) // JWT authentication middleware
 
-		// Add protected routes here - keep abstract, not service-specific
+		// Hotel endpoints (Admin only check inside handler)
+		r.Post("/hotels", h.handleCreateHotel)
+		r.Put("/hotels/{id}", h.handleUpdateHotel)
+		r.Delete("/hotels/{id}", h.handleDeleteHotel)
+
+		// Review endpoints (Authenticated users)
+		r.Post("/hotels/{id}/reviews", h.handleCreateReview)
 	})
 
 	return r
