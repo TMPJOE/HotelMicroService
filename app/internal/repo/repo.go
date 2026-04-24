@@ -10,7 +10,6 @@ import (
 )
 
 type ServiceRepository interface {
-	Foo(ctx context.Context) error
 	DbPing() error
 
 	// Hotel methods
@@ -25,5 +24,3 @@ type ServiceRepository interface {
 	ListReviewsByHotelID(ctx context.Context, hotelID string, limit, offset int) ([]*models.Review, error)
 	UpdateHotelRating(ctx context.Context, hotelID string) error
 }
-
-//REMEMBER TRANSACTION CODE LOGIC

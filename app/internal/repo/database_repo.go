@@ -23,10 +23,6 @@ func (dbr *databaseRepo) DbPing() error {
 	return err
 }
 
-func (dbr *databaseRepo) Foo(ctx context.Context) error {
-	return nil
-}
-
 // ListHotels lists hotels, optionally filtering by city
 func (dbr *databaseRepo) ListHotels(ctx context.Context, city string, limit, offset int) ([]*models.Hotel, error) {
 	query := `SELECT id, admin_id, name, city, description, rating, lat, lng, created_at, updated_at FROM hotels`

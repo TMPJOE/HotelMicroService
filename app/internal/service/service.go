@@ -27,29 +27,33 @@ type Service interface {
 	ListReviewsByHotelID(ctx context.Context, hotelID string, limit, offset int) ([]*models.Review, error)
 }
 
-type fooService struct {
+type hotelService struct {
 	l  *slog.Logger
 	r  repo.ServiceRepository
 	mc client.MediaClient
 }
 
-func (s *fooService) Check() error {
+func (s *hotelService) Check() error {
 	s.l.Info("Pinging db...")
 	err := s.r.DbPing()
-	s.l.Info("is service working", "err", err.Error())
-	return err
+	if err != nil {
+		s.l.Error("service check failed", "error", err.Error())
+		return err
+	}
+	s.l.Info("service check passed")
+	return nil
 }
 
-func (s *fooService) ListHotels(ctx context.Context, city string, limit, offset int) ([]*models.Hotel, error) {
+func (s *hotelService) ListHotels(ctx context.Context, city string, limit, offset int) ([]*models.Hotel, error) {
 	return s.r.ListHotels(ctx, city, limit, offset)
 }
 
-func (s *fooService) CreateHotel(ctx context.Context, hotel *models.Hotel) error {
+func (s *hotelService) CreateHotel(ctx context.Context, hotel *models.Hotel) error {
 	hotel.ID = uuid.NewString()
 	return s.r.CreateHotel(ctx, hotel)
 }
 
-func (s *fooService) CreateHotelWithFiles(ctx context.Context, hotel *models.Hotel, files []models.FileUpload) error {
+func (s *hotelService) CreateHotelWithFiles(ctx context.Context, hotel *models.Hotel, files []models.FileUpload) error {
 	hotel.ID = uuid.NewString()
 
 	if err := s.r.CreateHotel(ctx, hotel); err != nil {
@@ -67,19 +71,19 @@ func (s *fooService) CreateHotelWithFiles(ctx context.Context, hotel *models.Hot
 	return nil
 }
 
-func (s *fooService) GetHotelByID(ctx context.Context, id string) (*models.Hotel, error) {
+func (s *hotelService) GetHotelByID(ctx context.Context, id string) (*models.Hotel, error) {
 	return s.r.GetHotelByID(ctx, id)
 }
 
-func (s *fooService) UpdateHotel(ctx context.Context, hotel *models.Hotel) error {
+func (s *hotelService) UpdateHotel(ctx context.Context, hotel *models.Hotel) error {
 	return s.r.UpdateHotel(ctx, hotel)
 }
 
-func (s *fooService) DeleteHotel(ctx context.Context, id string) error {
+func (s *hotelService) DeleteHotel(ctx context.Context, id string) error {
 	return s.r.DeleteHotel(ctx, id)
 }
 
-func (s *fooService) CreateReview(ctx context.Context, review *models.Review) error {
+func (s *hotelService) CreateReview(ctx context.Context, review *models.Review) error {
 	review.ID = uuid.NewString()
 	err := s.r.CreateReview(ctx, review)
 	if err != nil {
@@ -88,12 +92,12 @@ func (s *fooService) CreateReview(ctx context.Context, review *models.Review) er
 	return s.r.UpdateHotelRating(ctx, review.HotelID)
 }
 
-func (s *fooService) ListReviewsByHotelID(ctx context.Context, hotelID string, limit, offset int) ([]*models.Review, error) {
+func (s *hotelService) ListReviewsByHotelID(ctx context.Context, hotelID string, limit, offset int) ([]*models.Review, error) {
 	return s.r.ListReviewsByHotelID(ctx, hotelID, limit, offset)
 }
 
 func New(l *slog.Logger, r repo.ServiceRepository, mc client.MediaClient) Service {
-	return &fooService{
+	return &hotelService{
 		l:  l,
 		r:  r,
 		mc: mc,
