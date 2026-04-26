@@ -49,12 +49,20 @@ func (s *hotelService) ListHotels(ctx context.Context, city string, limit, offse
 }
 
 func (s *hotelService) CreateHotel(ctx context.Context, hotel *models.Hotel) error {
-	hotel.ID = uuid.NewString()
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	hotel.ID = id.String()
 	return s.r.CreateHotel(ctx, hotel)
 }
 
 func (s *hotelService) CreateHotelWithFiles(ctx context.Context, hotel *models.Hotel, files []models.FileUpload) error {
-	hotel.ID = uuid.NewString()
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	hotel.ID = id.String()
 
 	if err := s.r.CreateHotel(ctx, hotel); err != nil {
 		return err
@@ -84,8 +92,12 @@ func (s *hotelService) DeleteHotel(ctx context.Context, id string) error {
 }
 
 func (s *hotelService) CreateReview(ctx context.Context, review *models.Review) error {
-	review.ID = uuid.NewString()
-	err := s.r.CreateReview(ctx, review)
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	review.ID = id.String()
+	err = s.r.CreateReview(ctx, review)
 	if err != nil {
 		return err
 	}
